@@ -55,7 +55,7 @@ class Burndown extends Component {
     componentDidMount = () => {
         console.log(this.state.gitUser);
         console.log(this.state.gitRepo);
-        this.instance.get(`repos/${this.state.gitUser}/${this.state.gitRepo}milestones`)
+        this.instance.get(`repos/${this.state.gitUser + this.state.gitRepo}/milestones`)
             .then(function (response) {
                 this.setState({ milestones: response.data, milestoneNumber: response.data[0].number }, this.handleMilestoneChange);
             }.bind(this));
@@ -67,7 +67,7 @@ class Burndown extends Component {
 
     handleMilestoneChange = (event) => {
         var number = event ? event.target.value : this.state.milestoneNumber;
-        this.instance.get(`repos/${this.state.gitUser}/${this.state.gitRepo}milestones/${number}`)
+        this.instance.get(`repos/${this.state.gitUser + this.state.gitRepo}/milestones/${number}`)
             .then(function (response) {
                 console.log(response.data)
                 this.setState({ milestone: response.data, milestoneNumber: number }, this.handleMilestoneSelection);
@@ -76,7 +76,7 @@ class Burndown extends Component {
     }
 
     handleMilestoneSelection = () => {
-        this.instance.get(`repos/${this.state.gitUser}/${this.state.gitRepo}issues?milestone=${this.state.milestone.number}&state=all`)
+        this.instance.get(`repos/${this.state.gitUser + this.state.gitRepo}/issues?milestone=${this.state.milestone.number}&state=all`)
             .then(function (response) {
                 this.setState({ issues: response.data }, this.handleWeek);
             }.bind(this));
