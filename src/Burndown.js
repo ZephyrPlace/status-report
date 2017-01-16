@@ -53,11 +53,11 @@ class Burndown extends Component {
     }
 
     componentDidMount = () => {
-        console.log(this.state.gitUser);
-        console.log(this.state.gitRepo);
         this.instance.get(`repos/${this.state.gitUser + this.state.gitRepo}/milestones`)
             .then(function (response) {
-                this.setState({ milestones: response.data, milestoneNumber: response.data[0].number }, this.handleMilestoneChange);
+                if (response && response.data.length > 0) {
+                    this.setState({ milestones: response.data, milestoneNumber: response.data[0].number }, this.handleMilestoneChange);
+                }
             }.bind(this));
     }
 
@@ -69,7 +69,6 @@ class Burndown extends Component {
         var number = event ? event.target.value : this.state.milestoneNumber;
         this.instance.get(`repos/${this.state.gitUser + this.state.gitRepo}/milestones/${number}`)
             .then(function (response) {
-                console.log(response.data)
                 this.setState({ milestone: response.data, milestoneNumber: number }, this.handleMilestoneSelection);
             }.bind(this));
 
@@ -119,8 +118,6 @@ class Burndown extends Component {
             return a.date - b.date;
         });
 
-        //     { date: moment('2016-12-11T20:09:31Z', moment.ISO_8601), remaining: 100, burn: 0 },
-        console.log(auxWeek);
         this.setState({ week: auxWeek })
     }
 
