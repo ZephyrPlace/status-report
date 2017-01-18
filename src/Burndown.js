@@ -21,17 +21,7 @@ class Burndown extends Component {
         super(props)
         this.state = {
             showWeekend: true,
-            // week: [
-            //     { date: moment('2016-12-11T20:09:31Z', moment.ISO_8601), remaining: 100, burn: 0 },
-            //     { date: moment('2016-12-12T20:09:31Z', moment.ISO_8601), remaining: 80, burn: 20 },
-            //     { date: moment('2016-12-13T20:09:31Z', moment.ISO_8601), remaining: 83, burn: 17 },
-            //     { date: moment('2016-12-14T20:09:31Z', moment.ISO_8601), remaining: 74, burn: 26 },
-            //     { date: moment('2016-12-15T20:09:31Z', moment.ISO_8601), remaining: 45, burn: 55 },
-            //     { date: moment('2016-12-16T20:09:31Z', moment.ISO_8601), remaining: 10, burn: 90 },
-            //     { date: moment('2016-12-17T20:09:31Z', moment.ISO_8601), remaining: 10, burn: 90 },
-            //     { date: moment('2016-12-18T20:09:31Z', moment.ISO_8601), remaining: 10, burn: 90 },
-            //     { date: moment('2016-12-19T20:09:31Z', moment.ISO_8601), remaining: 3, burn: 97 }
-            // ],
+            total: 0,
             weekends: [],
             milestone: {},
             milestones: [],
@@ -41,15 +31,23 @@ class Burndown extends Component {
         };
         const storage = Storages.sessionStorage;
 
-        this.instance = axios.create({
-            baseURL: 'https://api.github.com/',
-            timeout: 15000,
-            auth: {
-                username: storage.get('user'),
-                password: storage.get('pw')
-            },
-            headers: { 'Accept': 'application/vnd.github.v3+json' }
-        });
+        if (storage.get('user') && storage.get('pw')) {
+            this.instance = axios.create({
+                baseURL: 'https://api.github.com/',
+                timeout: 15000,
+                auth: {
+                    username: storage.get('user'),
+                    password: storage.get('pw')
+                },
+                headers: { 'Accept': 'application/vnd.github.v3+json' }
+            });
+        } else {
+            this.instance = axios.create({
+                baseURL: 'https://api.github.com/',
+                timeout: 15000,
+                headers: { 'Accept': 'application/vnd.github.v3+json' }
+            });
+        }
     }
 
     componentDidMount = () => {
@@ -98,19 +96,33 @@ class Burndown extends Component {
         }
         recursiveWeek();
 
+
+        var total = 0;
+        for (var index in this.state.issues) {
+            var aux = moment(this.state.issues[index].created_at, moment.ISO_8601).startOf('day');
+            if (aux.isBefore(auxWeek[0].date) || aux.isSame(auxWeek[0].date)) {
+                total++;
+            }
+        }
         for (var week = 0; week < auxWeek.length; week++) {
-            var remaing = week ? auxWeek[week - 1].remaining : (this.state.milestone.closed_issues + this.state.milestone.open_issues);
+            var remaining = week ? auxWeek[week - 1].remaining : total;
             var burn = week ? auxWeek[week - 1].burn : 0;
             for (var index in this.state.issues) {
                 if (this.state.issues[index].closed_at) {
                     var close_at = moment(this.state.issues[index].closed_at, moment.ISO_8601).startOf('day');
                     if (close_at.isSame(auxWeek[week].date)) {
                         burn++;
-                        remaing--;
+                        remaining--;
                     }
                 }
+                // if (this.state.issues[index].created_at) {
+                var created_at = moment(this.state.issues[index].created_at, moment.ISO_8601).startOf('day');
+                if (created_at.isSame(auxWeek[week].date) && week) {
+                    remaining++;
+                }
+                // }
             }
-            auxWeek[week]["remaining"] = remaing;
+            auxWeek[week]["remaining"] = remaining;
             auxWeek[week]["burn"] = burn;
         }
 
@@ -118,7 +130,7 @@ class Burndown extends Component {
             return a.date - b.date;
         });
 
-        this.setState({ week: auxWeek })
+        this.setState({ week: auxWeek, total: total })
     }
 
     handleWeekend = () => {
@@ -168,16 +180,21 @@ class Burndown extends Component {
         if (!this.state.showWeekend) {
             max = dates[0].expected ? dates[0].expected : dates[0].remaining;
         }
+
         expected[0] = max;
-        var aux = max / (dates.length - 1);
+
+        var aux1 = 0;
         var aux2 = 0;
         for (var d in dates) {
             if (business.isWeekendDay(dates[d].date)) {
                 aux2++;
+            } else {
+                aux1++;
             }
         }
-        aux2 = aux2 - 1;
-        var menos = (aux2 * aux / (dates.length - 1 - aux2))
+        var aux = max / (dates.length - 1);
+        var menos = ((aux2 * aux)) / (aux1 - 1);
+
         for (var i = 1; i < dates.length; i++) {
             var result;
             if (business.isWeekendDay(dates[i].date)) {
@@ -198,9 +215,16 @@ class Burndown extends Component {
         var data;
         if (this.state.week) {
             const dates = this.state.week.map(function (a) { return a.date.format("DD/MM/YYYY"); });
-            const remaining = this.state.week.map(function (a) { return a.remaining; });
-            const burn = this.state.week.map(function (a) { return a.burn; });
-            const expected = this.handleExpected((this.state.milestone.closed_issues + this.state.milestone.open_issues), this.state.week);
+
+            const remaining = this.state.week.map(function (a) {
+                if (a.date.isBefore(moment()) || a.date.isSame(moment))
+                    return a.remaining;
+            });
+            const burn = this.state.week.map(function (a) {
+                if (a.date.isBefore(moment()) || a.date.isSame(moment))
+                    return a.burn;
+            });
+            const expected = this.handleExpected(this.state.total, this.state.week);
 
             data = {
                 labels: dates,
