@@ -27,7 +27,7 @@ class Burndown extends Component {
             milestones: [],
             issues: [],
             gitUser: wurl('sub', window.location.href),
-            gitRepo: wurl('path', window.location.href)
+            gitRepo: wurl('1', window.location.href)
         };
         const storage = Storages.sessionStorage;
 
@@ -51,7 +51,7 @@ class Burndown extends Component {
     }
 
     componentDidMount = () => {
-        this.instance.get(`repos/${this.state.gitUser + this.state.gitRepo}/milestones`)
+        this.instance.get(`repos/${this.state.gitUser}/${this.state.gitRepo}/milestones`)
             .then(function (response) {
                 if (response && response.data.length > 0) {
                     this.setState({ milestones: response.data, milestoneNumber: response.data[0].number }, this.handleMilestoneChange);
@@ -65,7 +65,7 @@ class Burndown extends Component {
 
     handleMilestoneChange = (event) => {
         var number = event ? event.target.value : this.state.milestoneNumber;
-        this.instance.get(`repos/${this.state.gitUser + this.state.gitRepo}/milestones/${number}`)
+        this.instance.get(`repos/${this.state.gitUser}/${this.state.gitRepo}/milestones/${number}`)
             .then(function (response) {
                 this.setState({ milestone: response.data, milestoneNumber: number }, this.handleMilestoneSelection);
             }.bind(this));
@@ -73,7 +73,7 @@ class Burndown extends Component {
     }
 
     handleMilestoneSelection = () => {
-        this.instance.get(`repos/${this.state.gitUser + this.state.gitRepo}/issues?milestone=${this.state.milestone.number}&state=all`)
+        this.instance.get(`repos/${this.state.gitUser}/${this.state.gitRepo}/issues?milestone=${this.state.milestone.number}&state=all`)
             .then(function (response) {
                 this.setState({ issues: response.data }, this.handleWeek);
             }.bind(this));
